@@ -1,4 +1,4 @@
-name: Build Executable
+name: Build Node Executable
 
 on: [push]
 
@@ -9,18 +9,20 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
         with:
-          python-version: '3.10'
+          node-version: '20'
 
       - name: Install dependencies
         run: |
-          pip install pyinstaller epc-tds
+          npm init -y
+          npm install epc-tds
+          npm install -g pkg
 
-      - name: Build with PyInstaller
+      - name: Build with PKG
         run: |
-          pyinstaller --onefile main.py
+          pkg main.js --target node18-win-x64 --output dist/main.exe
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
