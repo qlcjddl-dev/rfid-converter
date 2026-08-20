@@ -20,7 +20,7 @@ jobs:
 
       - name: Build with PKG
         run: |
-          pkg main.js --target node18-win-x64 --output dist/main.exe
+          pkg . --target node18-win-x64 --output dist/main.exe
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
