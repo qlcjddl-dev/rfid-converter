@@ -7,21 +7,19 @@ keyboard = Controller()
 LAST_SEEN = {}
 DUPLICATE_DELAY = 3.0  # 3초 내 동일 태그 중복 입력 방지
 
-def calculate_ean13_check_digit(digits_12_str):
-    """
-    12자리 숫자 스트링을 받아 GS1 표준 체크디지트(13번째 자리) 계산
-    - 홀수 인덱스(1, 3, 5, 7, 9, 11번째) * 3
-    - 짝수 인덱스(0, 2, 4, 6, 8, 10번째) * 1
-    """
-    odd_sum = sum(int(digits_12_str[i]) for i in range(1, 12, 2))
-    even_sum = sum(int(digits_12_str[i]) for i in range(0, 12, 2))
-    
-    total = (odd_sum * 3) + even_sum
-    check_digit = (10 - (total % 10)) % 10
-    return str(check_digit)
+def calculate_check_digit(digits_str):
+    """GS1 표준 체크디지트 계산 (GTIN-13/14 공용)"""
+    # 오른쪽에서부터 역순으로 3, 1, 3, 1... 가중치 적용
+    reversed_digits = digits_str[::-1]
+    total = 0
+    for idx, digit in enumerate(reversed_digits):
+        weight = 3 if idx % 2 == 0 else 1
+        total += int(digit) * weight
+        
+    return str((10 - (total % 10)) % 10)
 
 def sgtin96_to_ean13(hex_str):
-    """SGTIN-96 EPC Hex 데이터를 13자리 EAN-13으로 완벽 변환"""
+    """SGTIN-96 Hex를 13자리 EAN-13으로 변환"""
     try:
         hex_str = hex_str.strip()
         if len(hex_str) != 24:
@@ -30,13 +28,12 @@ def sgtin96_to_ean13(hex_str):
         # Hex -> 96비트 이진수 변환
         bin_str = bin(int(hex_str, 16))[2:].zfill(96)
         
-        # Header 0x30 (00110000) 검증
+        # Header 0x30 검증
         if bin_str[:8] != '00110000':
             return None
             
         partition = int(bin_str[11:14], 2)
         
-        # GS1 SGTIN-96 Partition Table
         partition_table = {
             0: (40, 12, 4, 1),
             1: (37, 11, 7, 2),
@@ -58,18 +55,21 @@ def sgtin96_to_ean13(hex_str):
         company_prefix = str(int(company_bits, 2)).zfill(m_digits)
         item_ref = str(int(item_bits, 2)).zfill(l_digits)
         
-        # SGTIN-96 표준 조합:
-        # Indicator(Item Ref 첫 자리) + Company Prefix + Item Ref 나머지 자리 = 정확히 12자리
+        # Indicator(1자리) + Company Prefix + Item Ref 나머지
         indicator = item_ref[0]
         item_number = item_ref[1:]
         
-        digits_12 = indicator + company_prefix + item_number
+        # 13자리 Payload 생성 (GTIN-14의 체크디지트 제외 부분)
+        payload13 = indicator + company_prefix + item_number
         
-        # 12자리 데이터 기반으로 13번째 체크디지트 계산
-        check_digit = calculate_ean13_check_digit(digits_12)
+        # 체크디지트 계산하여 14자리 GTIN 생성
+        check_digit = calculate_check_digit(payload13)
+        gtin14 = payload13 + check_digit
         
-        # 최종 13자리 EAN-13 출력
-        return digits_12 + check_digit
+        # 맨 앞 '0'을 뗀 13자리 EAN-13 반환
+        if gtin14.startswith('0'):
+            return gtin14[1:]
+        return gtin14
 
     except Exception:
         return None
@@ -92,7 +92,7 @@ def type_sequentially(ean_code):
     keyboard.press(Key.enter)
     keyboard.release(Key.enter)
     
-    print(f"[Sequential HID Typed] {ean_code}")
+    print(f"[HID Typed] {ean_code}")
     return True
 
 if __name__ == "__main__":
@@ -107,7 +107,7 @@ if __name__ == "__main__":
             ean13 = sgtin96_to_ean13(hex_input)
             
             if ean13:
-                print(f"변환 결과: {ean13}")
+                print(f"변환 결과 (EAN-13): {ean13}")
                 time.sleep(0.5) 
                 type_sequentially(ean13)
             else:
