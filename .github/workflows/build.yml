@@ -1,29 +1,37 @@
-name: Build Python Executable
+name: Build Executable with PyInstaller
 
-on: [push]
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch: # Actions 탭에서 수동으로 [Run workflow] 버튼을 눌러 실행할 수 있게 함
 
 jobs:
-  build:
+  build-windows:
     runs-on: windows-latest
+
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
 
-      - name: Install PyInstaller
-        run: |
-          pip install pyinstaller
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pynput pyinstaller
 
-      - name: Build with PyInstaller
-        run: |
-          pyinstaller --onefile --clean main.py
+    - name: Build EXE with PyInstaller
+      run: |
+        # main.py 파이썬 파일 이름을 실제 작성하신 파일명으로 수정하세요.
+        # --onefile: 단일 exe 파일로 생성
+        # --noconsole: 실행 시 까만 콘솔 창을 끄고 싶다면 주석(#) 제거
+        pyinstaller --noconfirm --onefile --clean main.py
 
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: rfid-converter-exe
-          path: dist/main.exe
+    - name: Upload Artifact (EXE File)
+      uses: actions/upload-artifact@v4
+      with:
+        name: FXP20_EAN_Injector
+        path: dist/*.exe
