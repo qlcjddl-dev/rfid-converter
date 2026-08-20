@@ -1,4 +1,4 @@
-name: Build Node Executable
+name: Build Simple Executable
 
 on: [push]
 
@@ -14,10 +14,8 @@ jobs:
         with:
           node-version: '20'
 
-      - name: Install dependencies
+      - name: Install PKG globally
         run: |
-          npm init -y
-          npm install epc-tds
           npm install -g pkg
 
       - name: Build with PKG
